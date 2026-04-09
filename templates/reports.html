@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports & Insights</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* [KEEP ALL YOUR EXISTING STYLES - NO CHANGE NEEDED] */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+    min-height: 100vh;
+    padding: 20px;
+    color: #2c3e50;
+}
+
+body.dark {
+    background: linear-gradient(135deg, #1a1e2e, #16213e);
+    color: #ecf0f1;
+}
+
+/* [KEEP ALL OTHER STYLES EXACTLY AS THEY ARE] */
+.header { max-width: 1200px; margin: 0 auto 40px; text-align: center; }
+.header h1 { font-size: 36px; font-weight: 600; background: linear-gradient(135deg, #3498db, #2980b9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
+.action-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+.btn { padding: 16px 32px; border: none; border-radius: 24px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 12px; backdrop-filter: blur(20px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); transition: all 0.3s ease; position: relative; overflow: hidden; }
+.btn-export { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+.btn-export:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(46,204,113,0.4); }
+.btn-period { background: rgba(255,255,255,0.25); color: #2c3e50; border: 1px solid rgba(255,255,255,0.3); }
+.btn-period:hover, .btn-period.active { background: rgba(52,152,219,0.2); border-color: rgba(52,152,219,0.5); color: #3498db; }
+.btn-period.active { box-shadow: 0 0 0 3px rgba(52,152,219,0.2); }
+.section { max-width: 1200px; margin: 0 auto 40px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(40px); border-radius: 32px; padding: 40px; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 25px 45px rgba(0,0,0,0.1); }
+.section h2 { font-size: 24px; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 32px; margin-bottom: 32px; }
+.chart-container { background: rgba(255,255,255,0.15); border-radius: 24px; padding: 32px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); }
+.chart-container canvas { max-height: 300px; border-radius: 16px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.insight-card { background: rgba(255,255,255,0.2); border-radius: 24px; padding: 28px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; }
+.insight-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+.insight-icon { font-size: 48px; margin-bottom: 16px; }
+.insight-h3 { font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #3498db; }
+.insight-text { line-height: 1.6; opacity: 0.9; }
+table { width: 100%; border-collapse: collapse; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1); background: rgba(255,255,255,0.2); }
+th { background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px 16px; text-align: left; font-weight: 500; }
+td { padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+tr:hover { background: rgba(255,255,255,0.3); }
+body.dark .section, body.dark .chart-container, body.dark .insight-card { background: rgba(30,39,46,0.5); border-color: rgba(255,255,255,0.1); }
+body.dark th { background: linear-gradient(135deg, #34495e, #2c3e50); }
+body.dark .insight-h3 { color: #16a085; }
+body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
+@media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } .action-buttons { flex-direction: column; align-items: center; } .btn { width: 100%; max-width: 300px; justify-content: center; } }
+</style>
+</head>
+
+<body>
+<div class="main-content">
+    <div class="header">
+        <h1>📊 Reports & Insights</h1>
+        <p>Analyze your finances, export data, and get personalized saving tips</p>
+    </div>
+
+    <div class="action-buttons">
+        <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
+        <a href="/export/transactions?period=month" class="btn btn-export">📅 This Month Excel</a>
+        <a href="/reports/all" class="btn btn-period active">All Time</a>
+        <a href="/reports/year" class="btn btn-period">This Year</a>
+        <a href="/reports/month" class="btn btn-period">This Month</a>
+    </div>
+
+    <div class="section">
+        <h2>📈 Financial Trends</h2>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Monthly Spending</h3>
+                <canvas id="spendingChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Category Breakdown</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Income vs Expenses</h3>
+                <canvas id="balanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>💡 Smart Insights & Saving Tips</h2>
+        <div class="insights-grid">
+            <div class="insight-card">
+                <div class="insight-icon">💰</div>
+                <h3 id="savingPotential">Your Savings Score: <span class="score">0%</span></h3>
+                <div class="insight-text" id="savingTip">Loading insights...</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-icon">⚠️</div>
+                <h3 id="topExpense">Top Expense Category</h3>
+                <div class="insight-text" id="topCategory">Loading...</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-icon">📉</div>
+                <h3>Trend Alert</h3>
+                <div class="insight-text">Review your spending patterns</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📋 Recent Transactions</h2>
+        <table id="transactionsTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody id="transactionsBody">
+                <tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">Loading transactions...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// ✅ PERFECT - SINGLE SOURCE OF TRUTH
+window.appData = {{ chart_data | tojson | safe }};
+window.insights = {{ insights | tojson | safe }};
+
+let charts = []; // Track chart instances
+
+function renderCharts() {
+    const data = window.appData;
+    
+    // Destroy previous charts properly
+    charts.forEach(chart => chart.destroy());
+    charts = [];
+    
+    // 1. Monthly Spending
+    const spendingCtx = document.getElementById('spendingChart')?.getContext('2d');
+    if (spendingCtx) {
+        charts.push(new Chart(spendingCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Spending',
+                    data: Object.values(data.monthly_spending || {}),
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231,76,60,0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    }
+
+    // 2. Category Breakdown
+    const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
+    if (categoryCtx) {
+        charts.push(new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data.categories || {}),
+                datasets: [{
+                    data: Object.values(data.categories || {}),
+                    backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#e67e22', '#e74c3c', '#9b59b6']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    }
+
+    // 3. Income vs Expenses
+    const balanceCtx = document.getElementById('balanceChart')?.getContext('2d');
+    if (balanceCtx) {
+        charts.push(new Chart(balanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Income', 'Expenses'],
+                datasets: [{
+                    data: [data.balance?.income || 0, data.balance?.expenses || 0],
+                    backgroundColor: ['#2ecc71', '#e74c3c']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('transactionsBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    const transactions = window.appData.transactions || [];
+    
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">No transactions yet. <a href="/add">Add your first transaction</a></td></tr>';
+        return;
+    }
+    
+    transactions.slice(0, 10).forEach(t => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${t.Date || 'N/A'}</td>
+            <td>${t.Type || 'N/A'}</td>
+            <td>${t.Category || 'N/A'}</td>
+            <td>$${parseFloat(t.Amount || 0).toFixed(2)}</td>
+        `;
+    });
+}
+
+function renderInsights() {
+    const data = window.appData;
+    
+    // Savings Score
+    const savingEl = document.getElementById('savingPotential');
+    if (savingEl) {
+        const rate = Math.round((data.saving_rate || 0) * 100);
+        savingEl.innerHTML = `Your Savings Score: <span class="score">${rate}%</span>`;
+    }
+    
+    // Top Expense
+    const topExpenseEl = document.getElementById('topExpense');
+    const topCategoryEl = document.getElementById('topCategory');
+    if (topExpenseEl) topExpenseEl.innerHTML = `Top Expense: ${data.top_category || 'None'}`;
+    if (topCategoryEl) topCategoryEl.textContent = data.top_category ? `${data.top_category} is your biggest spend` : 'No expenses yet';
+}
+
+function renderAll() {
+    renderCharts();
+    renderInsights();
+    renderTable();
+}
+
+// Dark mode sync
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', renderAll);
+</script>
+</body>
+</html>
