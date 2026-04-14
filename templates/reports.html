@@ -59,7 +59,96 @@ body.dark .section, body.dark .chart-container, body.dark .insight-card { backgr
 body.dark th { background: linear-gradient(135deg, #34495e, #2c3e50); }
 body.dark .insight-h3 { color: #16a085; }
 body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
-@media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } .action-buttons { flex-direction: column; align-items: center; } .btn { width: 100%; max-width: 300px; justify-content: center; } }
+
+.mobile-menu {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+}
+
+.mobile-menu.open {
+    display: flex;
+}
+
+.mobile-menu-toggle {
+    display: none;
+    width: 100%;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: inline-flex;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: none;
+        justify-content: center;
+    }
+
+    .section {
+        padding: 24px 20px;
+    }
+
+    .header h1 {
+        font-size: 32px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 520px;
+    }
+}
+
+@media (max-width: 520px) {
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .action-buttons {
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 12px 18px;
+        font-size: 14px;
+    }
+
+    .section {
+        padding: 24px 18px;
+    }
+
+    .chart-container {
+        padding: 22px;
+    }
+
+    .chart-container canvas {
+        max-height: 240px;
+    }
+
+    table {
+        min-width: 380px;
+    }
+
+    th, td {
+        padding: 12px 8px;
+    }
+}
 </style>
 </head>
 
@@ -71,6 +160,14 @@ body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
     </div>
 
     <div class="action-buttons">
+        <button class="btn mobile-menu-toggle" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+        <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
+        <a href="/export/transactions?period=month&month={{ chart_data.selected_month or '' }}" class="btn btn-export">📅 Export Month to Excel</a>
+        <a href="/reports/all" class="btn btn-period {% if current_period == 'all' %}active{% endif %}">All Time</a>
+        <a href="/reports/year" class="btn btn-period {% if current_period == 'year' %}active{% endif %}">This Year</a>
+        <a href="/reports/month" class="btn btn-period {% if current_period == 'month' %}active{% endif %}">This Month</a>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
         <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
         <a href="/export/transactions?period=month&month={{ chart_data.selected_month or '' }}" class="btn btn-export">📅 Export Month to Excel</a>
         <a href="/reports/all" class="btn btn-period {% if current_period == 'all' %}active{% endif %}">All Time</a>
@@ -131,19 +228,21 @@ body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
     <div class="section">
         <h2>📋 Transactions{% if chart_data.selected_month %} for {{ chart_data.selected_month }}{% elif current_period == 'year' and selected_year %} for {{ selected_year }}{% endif %}</h2>
         <p style="margin-bottom:18px; color:#576370;">Showing {{ chart_data.record_count }} transaction{{ 's' if chart_data.record_count != 1 else '' }}.</p>
-        <table id="transactionsTable">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody id="transactionsBody">
-                <tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">Loading transactions...</td></tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody">
+                    <tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">Loading transactions...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -292,6 +391,14 @@ function renderInsights() {
     const topCategoryEl = document.getElementById('topCategory');
     if (topExpenseEl) topExpenseEl.innerHTML = `Top Expense: ${data.top_category || 'None'}`;
     if (topCategoryEl) topCategoryEl.textContent = data.top_category ? `${data.top_category} is your biggest spend` : 'No expenses yet';
+}
+
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    if (!menu) {
+        return;
+    }
+    menu.classList.toggle('open');
 }
 
 function renderAll() {

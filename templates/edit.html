@@ -81,6 +81,77 @@ button {
     color: white;
 }
 
+    .mobile-menu-toggle {
+        display: none;
+        width: 100%;
+        margin-bottom: 18px;
+        padding: 14px 16px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(52, 152, 219, 0.95);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        text-align: center;
+    }
+
+@media (max-width: 600px) {
+    .mobile-menu-toggle {
+        display: inline-flex;
+    }
+
+    .mobile-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+        max-width: 420px;
+        margin: 0 auto 20px;
+    }
+
+    .mobile-menu.open {
+        display: flex;
+    }
+
+    .mobile-menu a {
+        display: inline-flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 16px;
+        background: rgba(52, 152, 219, 0.15);
+        border: 1px solid rgba(52, 152, 219, 0.3);
+        border-radius: 18px;
+        text-decoration: none;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .mobile-menu a:hover {
+        background: rgba(52, 152, 219, 0.25);
+    }
+
+    body {
+        padding: 18px;
+        min-height: auto;
+        align-items: flex-start;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+        margin: 20px 0;
+        padding: 24px;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    button, .cancel-btn {
+        width: 100%;
+    }
+}
+
 .save-btn:hover {
     background: #27ae60;
 }
@@ -101,6 +172,13 @@ button {
 </head>
 
 <body>
+
+<button class="mobile-menu-toggle" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+<div id="mobileMenu" class="mobile-menu">
+    <a href="/">🏠 Dashboard</a>
+    <a href="/add">➕ Add Transaction</a>
+    <a href="/reports">📊 Reports</a>
+</div>
 
 <div class="container">
     <h1>✏️ Edit Transaction</h1>
@@ -128,5 +206,12 @@ button {
     </form>
 </div>
 
+<script>
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    if (!menu) return;
+    menu.classList.toggle('open');
+}
+</script>
 </body>
 </html>
