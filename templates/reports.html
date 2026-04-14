@@ -72,11 +72,31 @@ body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
 
     <div class="action-buttons">
         <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
-        <a href="/export/transactions?period=month" class="btn btn-export">📅 This Month Excel</a>
-        <a href="/reports/all" class="btn btn-period active">All Time</a>
-        <a href="/reports/year" class="btn btn-period">This Year</a>
-        <a href="/reports/month" class="btn btn-period">This Month</a>
+        <a href="/export/transactions?period=month&month={{ chart_data.selected_month or '' }}" class="btn btn-export">📅 Export Month to Excel</a>
+        <a href="/reports/all" class="btn btn-period {% if current_period == 'all' %}active{% endif %}">All Time</a>
+        <a href="/reports/year" class="btn btn-period {% if current_period == 'year' %}active{% endif %}">This Year</a>
+        <a href="/reports/month" class="btn btn-period {% if current_period == 'month' %}active{% endif %}">This Month</a>
     </div>
+
+    {% if chart_data.month_options %}
+    <div class="section" style="padding: 24px 40px; margin-bottom: 32px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-weight:600; font-size: 18px;">Available Months</div>
+            <p style="color: #576370; margin-top: 8px;">Select a month to view or download transactions</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; justify-items: center;">
+            {% for month in chart_data.month_options %}
+            <div style="background: rgba(255,255,255,0.15); border-radius: 16px; padding: 16px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 180px;">
+                <div style="font-weight: 600; margin-bottom: 12px; color: #3498db;">{{ month }}</div>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <a href="/reports/month?month={{ month }}" class="btn btn-period" style="padding: 8px 16px; font-size: 14px;">View</a>
+                    <a href="/export/transactions?period=month&month={{ month }}" class="btn btn-export" style="padding: 8px 16px; font-size: 14px;">Download</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <div class="section">
         <h2>📈 Financial Trends</h2>
@@ -99,26 +119,18 @@ body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
     <div class="section">
         <h2>💡 Smart Insights & Saving Tips</h2>
         <div class="insights-grid">
+            {% for tip in tips %}
             <div class="insight-card">
-                <div class="insight-icon">💰</div>
-                <h3 id="savingPotential">Your Savings Score: <span class="score">0%</span></h3>
-                <div class="insight-text" id="savingTip">Loading insights...</div>
+                <div class="insight-icon">💡</div>
+                <div class="insight-text">{{ tip }}</div>
             </div>
-            <div class="insight-card">
-                <div class="insight-icon">⚠️</div>
-                <h3 id="topExpense">Top Expense Category</h3>
-                <div class="insight-text" id="topCategory">Loading...</div>
-            </div>
-            <div class="insight-card">
-                <div class="insight-icon">📉</div>
-                <h3>Trend Alert</h3>
-                <div class="insight-text">Review your spending patterns</div>
-            </div>
+            {% endfor %}
         </div>
     </div>
 
     <div class="section">
-        <h2>📋 Recent Transactions</h2>
+        <h2>📋 Transactions{% if chart_data.selected_month %} for {{ chart_data.selected_month }}{% elif current_period == 'year' and selected_year %} for {{ selected_year }}{% endif %}</h2>
+        <p style="margin-bottom:18px; color:#576370;">Showing {{ chart_data.record_count }} transaction{{ 's' if chart_data.record_count != 1 else '' }}.</p>
         <table id="transactionsTable">
             <thead>
                 <tr>
@@ -152,20 +164,60 @@ function renderCharts() {
     // 1. Monthly Spending
     const spendingCtx = document.getElementById('spendingChart')?.getContext('2d');
     if (spendingCtx) {
+        const spendingLabels = data.monthly_spending?.labels || [];
+        const spendingValues = data.monthly_spending?.values || [];
+        const movingAverageValues = spendingValues.map((_, index, arr) => {
+            const window = arr.slice(Math.max(0, index - 2), index + 1);
+            const sum = window.reduce((acc, value) => acc + value, 0);
+            return window.length ? parseFloat((sum / window.length).toFixed(2)) : 0;
+        });
+
         charts.push(new Chart(spendingCtx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                datasets: [{
-                    label: 'Spending',
-                    data: Object.values(data.monthly_spending || {}),
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231,76,60,0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
+                labels: spendingLabels,
+                datasets: [
+                    {
+                        label: 'Monthly Spending',
+                        data: spendingValues,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231,76,60,0.18)',
+                        pointBackgroundColor: '#c0392b',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.5,
+                        cubicInterpolationMode: 'monotone',
+                        fill: true,
+                        borderWidth: 3
+                    },
+                    {
+                        label: '3-Month Average',
+                        data: movingAverageValues,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52,152,219,0.08)',
+                        pointRadius: 0,
+                        tension: 0.5,
+                        cubicInterpolationMode: 'monotone',
+                        borderDash: [6, 4],
+                        borderWidth: 2
+                    }
+                ]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 900, easing: 'easeOutQuart' },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#2c3e50' } },
+                    tooltip: { enabled: true, mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#2c3e50' } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(44,62,80,0.08)' }, ticks: { color: '#2c3e50' } }
+                }
+            }
         }));
     }
 
@@ -214,7 +266,7 @@ function renderTable() {
         return;
     }
     
-    transactions.slice(0, 10).forEach(t => {
+    transactions.forEach(t => {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${t.Date || 'N/A'}</td>

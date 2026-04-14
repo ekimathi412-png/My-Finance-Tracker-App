@@ -1,76 +1,165 @@
-from flask import Flask, render_template, request, redirect, url_for, session, make_response, send_file, flash
-from flask import jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 import pandas as pd
 import io
 from datetime import datetime
 from collections import defaultdict
 import json
 import os
-import hashlib
+import uuid
 
+from sqlalchemy import create_engine, Column, String, Float
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-
-# -------------------- FILE STORAGE / USERS --------------------
+# -------------------- DATABASE CONFIG --------------------
 
 DATA_FILE = "data.json"
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///finance.db")
+
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, echo=False)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+Base = declarative_base()
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(String, primary_key=True, index=True)
+    Type = Column(String, nullable=False)
+    Category = Column(String, nullable=False)
+    Amount = Column(Float, nullable=False)
+    Date = Column(String, nullable=False)
+
+Base.metadata.create_all(bind=engine)
 
 
-def hash_password(password):
-    return hashlib.md5(password.encode()).hexdigest()
-
-
-def load_data():
-    default = {"transactions": [], "users": {}}
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            loaded = json.load(f)
-        default.update(loaded)
-    return default
-
-
-def save_data(data):
-    # Always keep both transactions and users
-    data_to_save = {
-        "transactions": data.get("transactions", []),
-        "users": data.get("users", {}),
+def txn_to_dict(t):
+    return {
+        "id": t.id,
+        "Type": t.Type,
+        "Category": t.Category,
+        "Amount": t.Amount,
+        "Date": t.Date
     }
-    with open(DATA_FILE, "w") as f:
-        json.dump(data_to_save, f, indent=2)
 
 
-# Load data on startup
-data_store = load_data()
-transactions = data_store["transactions"]
-users = data_store["users"]
-categories = {}  # ← FIXED: this was missing
+def get_db_session():
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
-# ----------------------------- DASHBOARD ROUTE -----------------------------
+def load_transactions(filter_date=None):
+    session = SessionLocal()
+    try:
+        query = session.query(Transaction)
+        if filter_date:
+            query = query.filter(Transaction.Date == filter_date)
+        return [txn_to_dict(t) for t in query.order_by(Transaction.Date).all()]
+    finally:
+        session.close()
+
+
+def get_transaction(tid):
+    session = SessionLocal()
+    try:
+        return session.get(Transaction, tid)
+    finally:
+        session.close()
+
+
+def save_transaction(transaction_data):
+    session = SessionLocal()
+    try:
+        transaction = Transaction(**transaction_data)
+        session.add(transaction)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def update_transaction(transaction, new_data):
+    session = SessionLocal()
+    try:
+        transaction.Type = new_data["Type"]
+        transaction.Category = new_data["Category"]
+        transaction.Amount = new_data["Amount"]
+        transaction.Date = new_data["Date"]
+        session.add(transaction)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def delete_transaction(tid):
+    session = SessionLocal()
+    try:
+        transaction = session.get(Transaction, tid)
+        if transaction:
+            session.delete(transaction)
+            session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def migrate_data_json():
+    if not os.path.exists(DATA_FILE):
+        return
+
+    session = SessionLocal()
+    try:
+        if session.query(Transaction).first() is not None:
+            return
+
+        with open(DATA_FILE, "r") as f:
+            saved = json.load(f)
+
+        for t in saved.get("transactions", []):
+            if t.get("id") and session.get(Transaction, t["id"]) is None:
+                session.add(Transaction(
+                    id=t["id"],
+                    Type=t["Type"],
+                    Category=t["Category"],
+                    Amount=t["Amount"],
+                    Date=t["Date"]
+                ))
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
+
+
+migrate_data_json()
+
+categories = {}
+
+
+# ----------------------------- DASHBOARD -----------------------------
 
 @app.route('/')
 def index():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
     filter_date = request.args.get("date")
 
     balance = 0
     total_income = 0
     total_expense = 0
 
-    # Clear categories each time
     categories.clear()
-
-    # Only show this user's transactions
-    user_transactions = [t for t in transactions if t.get('user') == session['user']]
-
-    if filter_date:
-        filtered = [t for t in user_transactions if t["Date"] == filter_date]
-    else:
-        filtered = user_transactions
+    filtered = load_transactions(filter_date)
 
     for t in filtered:
         if t['Type'] == 'Income':
@@ -83,10 +172,6 @@ def index():
         key = (t['Type'], t['Category'])
         categories[key] = categories.get(key, 0) + t['Amount']
 
-    # Regenerate IDs so /edit /delete work
-    for i, t in enumerate(filtered):
-        t["id"] = i
-
     return render_template(
         'index.html',
         balance=balance,
@@ -98,73 +183,10 @@ def index():
     )
 
 
-# ----------------------------- SIGNUP -----------------------------
-
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-
-        if len(username) < 3:
-            flash("Username must be at least 3 characters.", "error")
-            return redirect(url_for('signup'))
-
-        if len(password) < 4:
-            flash("Password must be at least 4 characters.", "error")
-            return redirect(url_for('signup'))
-
-        if username in users:
-            flash("Username already taken.", "error")
-            return redirect(url_for('signup'))
-
-        # Save user
-        users[username] = {"password": hash_password(password)}
-
-        # Save to disk
-        save_data({"transactions": transactions, "users": users})
-
-        flash("Account created! You can now log in.", "success")
-        return redirect(url_for('login'))
-
-    return render_template('signup.html')
-
-
-# ----------------------------- LOGIN -----------------------------
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-
-        # Check if user exists and password matches
-        user_info = users.get(username)
-        if user_info and user_info["password"] == hash_password(password):
-            session['user'] = username
-            return redirect(url_for('index'))
-        else:
-            flash("Invalid username or password.", "error")
-            return redirect(url_for('login'))
-
-    return render_template('login.html')
-
-
-# ----------------------------- LOGOUT -----------------------------
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return redirect(url_for('login'))
-
-
 # ----------------------------- ADD TRANSACTION -----------------------------
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_transaction():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
     if request.method == 'POST':
         t_type = request.form['type']
         category = request.form['category']
@@ -172,23 +194,14 @@ def add_transaction():
         date = request.form['date']
 
         new_t = {
-            "id": len(transactions),
+            "id": str(uuid.uuid4()),
             "Type": t_type,
             "Category": category,
             "Amount": amount,
-            "Date": date,
-            "user": session['user']
+            "Date": date
         }
 
-        transactions.append(new_t)
-
-        # Recalculate IDs
-        for i, t in enumerate(transactions):
-            t["id"] = i
-
-        # Save to JSON
-        save_data({"transactions": transactions, "users": users})
-
+        save_transaction(new_t)
         return redirect(url_for('index'))
 
     return render_template('add.html')
@@ -196,47 +209,34 @@ def add_transaction():
 
 # ----------------------------- EDIT TRANSACTION -----------------------------
 
-@app.route('/edit/<int:tid>', methods=['GET', 'POST'])
+@app.route('/edit/<tid>', methods=['GET', 'POST'])
 def edit(tid):
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    session = SessionLocal()
+    try:
+        transaction = session.get(Transaction, tid)
+        if not transaction:
+            return "Transaction not found", 404
 
-    transaction = next((t for t in transactions if t["id"] == tid), None)
-    if not transaction:
-        return "Transaction not found", 404
+        if request.method == 'POST':
+            transaction.Type = request.form['type']
+            transaction.Category = request.form['category']
+            transaction.Amount = float(request.form['amount'])
+            transaction.Date = request.form['date']
 
-    if request.method == 'POST':
-        transaction["Type"] = request.form['type']
-        transaction["Category"] = request.form['category']
-        transaction["Amount"] = float(request.form['amount'])
-        transaction["Date"] = request.form['date']
+            session.add(transaction)
+            session.commit()
+            return redirect(url_for('index'))
 
-        # Save to JSON
-        save_data({"transactions": transactions, "users": users})
-
-        return redirect(url_for('index'))
-
-    return render_template('edit.html', t=transaction)
+        return render_template('edit.html', t=txn_to_dict(transaction))
+    finally:
+        session.close()
 
 
 # ----------------------------- DELETE TRANSACTION -----------------------------
 
-@app.route('/delete/<int:tid>')
+@app.route('/delete/<tid>')
 def delete(tid):
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
-    global transactions
-
-    transactions = [t for t in transactions if t["id"] != tid]
-
-    # Recalculate IDs
-    for i, t in enumerate(transactions):
-        t["id"] = i
-
-    # Save to JSON
-    save_data({"transactions": transactions, "users": users})
-
+    delete_transaction(tid)
     return redirect(url_for('index'))
 
 
@@ -245,21 +245,30 @@ def delete(tid):
 @app.route('/reports')
 @app.route('/reports/<period>')
 def reports(period='all'):
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    selected_month = request.args.get('month')
+    selected_year = request.args.get('year')
 
-    user_transactions = [t for t in transactions if t.get('user') == session['user']]
+    transactions = load_transactions()
 
     if period == 'year':
-        current_year = datetime.now().strftime('%Y')
-        filtered_transactions = [t for t in user_transactions if t['Date'].startswith(current_year)]
+        if selected_year:
+            filtered_transactions = [t for t in transactions if t['Date'].startswith(selected_year)]
+        else:
+            current_year = datetime.now().strftime('%Y')
+            filtered_transactions = [t for t in transactions if t['Date'].startswith(current_year)]
+            selected_year = current_year
     elif period == 'month':
-        current_month = datetime.now().strftime('%Y-%m')
-        filtered_transactions = [t for t in user_transactions if t['Date'].startswith(current_month)]
+        if selected_month:
+            filtered_transactions = [t for t in transactions if t['Date'].startswith(selected_month)]
+        else:
+            selected_month = datetime.now().strftime('%Y-%m')
+            filtered_transactions = [t for t in transactions if t['Date'].startswith(selected_month)]
     else:
-        filtered_transactions = user_transactions
+        filtered_transactions = transactions
 
     insights = calculate_insights(filtered_transactions)
+    tips = generate_tips(filtered_transactions, insights)
+    month_options = get_available_months(transactions)
 
     chart_data = {
         'monthly_spending': insights.get('monthly_spending', {"labels": [], "values": []}),
@@ -267,20 +276,26 @@ def reports(period='all'):
         'balance': insights.get('balance', {'income': 0, 'expenses': 0}),
         'top_category': insights.get('top_category', 'None'),
         'saving_rate': insights.get('saving_rate', 0) / 100,
-        'transactions': filtered_transactions[:10],
+        'transactions': filtered_transactions,
         'period': period,
-        'record_count': len(filtered_transactions)
+        'record_count': len(filtered_transactions),
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'month_options': month_options
     }
 
     return render_template(
         'reports.html',
         insights=insights,
         chart_data=chart_data,
-        current_period=period
+        current_period=period,
+        tips=tips,
+        selected_month=selected_month,
+        selected_year=selected_year
     )
 
 
-# ----------------------------- INSIGHTS / STATS HELPERS -----------------------------
+# ----------------------------- INSIGHTS -----------------------------
 
 def calculate_insights(transactions):
     if not transactions:
@@ -324,56 +339,99 @@ def calculate_insights(transactions):
     }
 
 
-def calculate_summary_stats(transactions):
-    insights = calculate_insights(transactions)
-    return {
-        'Total Income': insights['total_income'],
-        'Total Expenses': insights['total_expense'],
-        'Savings Rate (%)': f"{insights['saving_rate']:.1f}%",
-        'Top Category': insights['top_category'],
-        'Records': len(transactions)
-    }
-
-
 def get_monthly_spending(transactions):
     monthly = defaultdict(float)
     for t in transactions:
         if t['Type'] == 'Expense':
-            month = t['Date'][:7]  # YYYY‑MM
+            month = t['Date'][:7]
             monthly[month] += t['Amount']
+
     items = sorted(monthly.items())[-6:]
     labels = [key for key, _ in items]
     values = [round(value, 2) for _, value in items]
+
     return {"labels": labels, "values": values}
 
 
-# ----------------------------- EXPORT EXCEL -----------------------------
+def get_available_months(transactions):
+    months = sorted({t['Date'][:7] for t in transactions if t.get('Date')})
+    return months[-12:][::-1]
+
+
+def generate_tips(transactions, insights):
+    tips = []
+    if not transactions:
+        return [
+            'No data yet. Add income and expenses to get helpful insights.',
+            'Use the monthly selector to review each month once you start tracking transactions.'
+        ]
+
+    expense_total = insights['total_expense']
+    income_total = insights['total_income']
+    top_category = insights['top_category']
+    top_pct = insights['top_category_pct']
+    saving_rate = insights['saving_rate']
+
+    if income_total == 0:
+        tips.append('Add income entries first so the app can calculate savings and recommend budgets.')
+    elif expense_total > income_total:
+        tips.append('Your expenses are higher than your income. Look for cuts in non-essential spending this month.')
+    elif saving_rate >= 25:
+        tips.append('Excellent work—your saving rate is strong. Keep this momentum going.')
+    elif saving_rate >= 10:
+        tips.append('You are saving a portion of your income. Try trimming one category to improve your savings further.')
+    else:
+        tips.append('Your saving rate is low. Aim to reduce spending and keep expenses below 80% of income.')
+
+    if top_category != 'None' and top_pct > 30:
+        tips.append(f'{top_category} makes up {top_pct}% of your expenses. Review this category for possible savings.')
+    elif top_category != 'None':
+        tips.append(f'{top_category} is your top spend category. Keep tracking it to avoid overspending.')
+
+    monthly = insights.get('monthly_spending', {})
+    labels = monthly.get('labels', [])
+    values = monthly.get('values', [])
+    if len(values) >= 2:
+        if values[-1] > values[-2]:
+            tips.append('Your latest monthly spending increased. Check if recurring costs or one-time purchases caused the rise.')
+        else:
+            tips.append('Spending has stabilized or declined recently. Continue the good habit of monitoring transactions.')
+
+    if len(labels) > 0:
+        tips.append(f'Track monthly performance by choosing a month from the selector above. You have {len(labels)} spend months available.')
+
+    return tips
+
+
+# ----------------------------- EXPORT -----------------------------
 
 @app.route('/export/transactions')
 def export_transactions():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
     period = request.args.get('period', 'all')
-    user_transactions = [t for t in transactions if t.get('user') == session['user']]
+    selected_month = request.args.get('month')
+    selected_year = request.args.get('year')
 
-    if period != 'all':
-        if period == 'year':
-            user_transactions = [t for t in user_transactions if t['Date'].startswith('2026')]
-        elif period == 'month':
-            user_transactions = [t for t in user_transactions if t['Date'].startswith('2026-04')]
+    transactions = load_transactions()
 
-    df_transactions = pd.DataFrame(user_transactions)
-    summary = calculate_summary_stats(user_transactions)
-    df_summary = pd.DataFrame([summary])
+    if period == 'year':
+        year = selected_year or datetime.now().strftime('%Y')
+        filtered = [t for t in transactions if t['Date'].startswith(year)]
+    elif period == 'month':
+        month = selected_month or datetime.now().strftime('%Y-%m')
+        filtered = [t for t in transactions if t['Date'].startswith(month)]
+    else:
+        filtered = transactions
+
+    df_transactions = pd.DataFrame(filtered)
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_transactions.to_excel(writer, sheet_name='Transactions', index=False)
-        df_summary.to_excel(writer, sheet_name='Summary', index=False)
+
     output.seek(0)
 
     filename = f"finance_report_{period}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -382,9 +440,7 @@ def export_transactions():
     )
 
 
-# ----------------------------- START SERVER -----------------------------
+# ----------------------------- RUN SERVER -----------------------------
 
-if __name__ == '__main__':
-    app.run(debug=True)
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
