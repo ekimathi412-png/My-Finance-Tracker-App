@@ -7,8 +7,11 @@ import json
 import os
 import uuid
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, String, Float
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "secret123"
@@ -17,6 +20,8 @@ app.secret_key = "secret123"
 
 DATA_FILE = "data.json"
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///finance.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args, echo=False)

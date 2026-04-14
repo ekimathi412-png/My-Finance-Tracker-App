@@ -42,6 +42,14 @@ This app is ready for hosting on platforms like Render, Railway, or Heroku.
 ### PostgreSQL support
 
 This app defaults to SQLite locally using `sqlite:///finance.db`.
+It also supports PostgreSQL in production.
+
+For local development, copy `.env.example` to `.env` and adjust as needed:
+
+```powershell
+copy .env.example .env
+```
+
 If you want a production-grade database on Render or Railway, set a `DATABASE_URL` environment variable with your PostgreSQL connection string.
 
 Example:
@@ -51,6 +59,9 @@ postgresql://user:password@host:port/database
 ```
 
 Render and Railway will use `DATABASE_URL` automatically.
+
+On Render, your database URL may start with `postgres://`.
+The app automatically converts that into a SQLAlchemy-compatible `postgresql://` URL.
 
 ## Deploy to Railway
 
