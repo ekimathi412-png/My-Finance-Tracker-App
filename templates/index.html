@@ -251,10 +251,9 @@ tr:hover {
         width: 100%;
     }
 
-    table {
-        min-width: auto;
-        width: 100%;
-        display: block;
+    .table-responsive table {
+        min-width: 520px;
+        width: auto;
     }
 
     th, td {
@@ -698,6 +697,7 @@ body.sidebar-open .sidebar {
     <div class="section">
         <h2>📋 Recent Transactions</h2>
         {% if transactions %}
+        <div class="table-responsive">
         <table>
             <tr>
                 <th>Type</th>
@@ -730,6 +730,7 @@ body.sidebar-open .sidebar {
             </tr>
             {% endfor %}
         </table>
+        </div>
         {% else %}
             <div style="text-align:center; padding:40px; color:#7f8c8d;">
                 <p style="font-size:18px; margin-bottom:8px;">No transactions yet</p>
