@@ -200,18 +200,31 @@ button[type="submit"] {
 }
 
 @media (max-width: 600px) {
+    html, body {
+        min-height: 100%;
+    }
+
     body {
-        padding: 14px;
+        padding: 12px;
         align-items: flex-start;
         justify-content: flex-start;
     }
 
     .container {
         padding: 24px 18px;
-        max-width: 100%;
-        border-radius: 24px;
-        margin: 0;
         width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 22px;
+        min-height: calc(100vh - 24px);
+    }
+
+    .container h1 {
+        font-size: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
     }
 
     input, select {
@@ -232,14 +245,11 @@ button[type="submit"] {
         min-width: 0;
     }
 
-    .form-group {
-        margin-bottom: 18px;
-    }
-
     .back {
         display: block;
         width: 100%;
         box-sizing: border-box;
+        padding: 14px 18px;
     }
 }
 
