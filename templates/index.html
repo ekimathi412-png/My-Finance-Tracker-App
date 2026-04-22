@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Tracker Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    transition: background 0.4s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+}
+
+body {
+    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+    padding: 20px;
+    color: #2c3e50;
+    transition: background 0.5s ease, color 0.3s ease;
+    opacity: 1;
+}
+
+body.switching {
+    opacity: 0.6;
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    font-weight: 600;
+}
+
+.add-btn {
+    background: #3498db;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: 0.3s;
+    font-weight: 500;
+}
+
+.add-btn:hover {
+    background: #2980b9;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+}
+
+.toggle-btn {
+    background: #2c3e50;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.4s ease;
+}
+
+.toggle-btn:hover {
+    transform: rotate(20deg) scale(1.1);
+}
+
+/* SUMMARY CARDS */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.card {
+    padding: 24px;
+    border-radius: 24px;
+    color: white;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.income { 
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+.expense { 
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+.balance { 
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.card h3 {
+    font-weight: 400;
+    margin-bottom: 12px;
+    opacity: 0.95;
+}
+
+.card p {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* SECTIONS */
+.section {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    padding: 28px;
+    border-radius: 24px;
+    margin-bottom: 25px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    position: relative;
+}
+
+.section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    padding: 2px;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0.7;
+}
+
+.section h2 {
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+/* TABLES */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+th, td {
+    padding: 16px 12px;
+    text-align: left;
+}
+
+th {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+tr:nth-child(even) {
+    background: rgba(255,255,255,0.5);
+}
+
+tr:hover {
+    background: rgba(52, 152, 219, 0.1);
+    transform: scale(1.01);
+}
+
+/* TYPE BADGES */
+.badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.income-badge { 
+    background: rgba(46, 204, 113, 0.8);
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+.expense-badge { 
+    background: rgba(231, 76, 60, 0.8);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+/* RESPONSIVE */
+@media(max-width: 600px) {
+    .header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .add-btn {
+        width: 100%;
+        max-width: 320px;
+        justify-content: center;
+    }
+    
+    .cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .section {
+        padding: 20px 18px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table-responsive table {
+        width: 100%;
+        min-width: auto;
+        table-layout: auto;
+    }
+
+    .table-responsive th,
+    .table-responsive td {
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    th, td {
+        padding: 12px 10px;
+    }
+}
+
+@media(max-width: 480px) {
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .header p {
+        font-size: 14px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .card p {
+        font-size: 24px;
+    }
+
+    .section {
+        padding: 18px 14px;
+        margin-bottom: 20px;
+    }
+
+    .action-buttons {
+        gap: 12px;
+    }
+
+    .btn {
+        padding: 12px 18px;
+        font-size: 14px;
+    }
+
+    .btn-export,
+    .btn-period {
+        min-width: 0;
+    }
+
+    .charts-grid {
+        gap: 18px;
+    }
+
+    .chart-container {
+        padding: 22px;
+    }
+
+    .table-responsive table {
+        min-width: auto;
+    }
+
+    th, td {
+        padding: 10px 8px;
+        white-space: normal;
+    }
+}
+
+/* DARK MODE */
+body.dark {
+    background: linear-gradient(135deg, #1a1e2e, #16213e);
+    color: #ecf0f1;
+}
+
+body.dark .section {
+    background: rgba(30, 39, 46, 0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+body.dark table th {
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+}
+
+body.dark tr:nth-child(even) {
+    background: rgba(52, 73, 94, 0.3);
+}
+
+body.dark tr:hover {
+    background: rgba(26, 188, 156, 0.2);
+}
+
+body.dark .add-btn {
+    background: linear-gradient(135deg, #16a085, #1abc9c);
+}
+
+body.dark .card {
+    backdrop-filter: blur(20px);
+}
+
+/* GLASSY SIDEBAR - ENHANCED */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    z-index: 1000;
+    
+    /* Pure glassy effect */
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-right: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0 32px 32px 0;
+    
+    /* Soft shadows */
+    box-shadow: 
+        6px 0 40px rgba(0,0,0,0.15),
+        inset 0 0 20px rgba(255,255,255,0.05);
+    
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 0 32px 32px 0;
+    padding: 2px;
+    background: linear-gradient(45deg, 
+        rgba(255,255,255,0.15), 
+        rgba(255,255,255,0.35), 
+        rgba(255,255,255,0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0.8;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.nav {
+    list-style: none;
+    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav li {
+    margin: 8px 0;
+}
+
+.nav a {
+    text-decoration: none;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nav a:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateX(8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.nav a:hover::before {
+    opacity: 1;
+}
+
+.nav a.active {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    box-shadow: 0 8px 25px rgba(52,152,219,0.3);
+}
+
+.nav a span {
+    font-size: 20px;
+    width: 24px;
+}
+
+/* Dark mode sidebar */
+body.dark .sidebar {
+    background: rgba(26, 32, 44, 0.4);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 
+        6px 0 40px rgba(0,0,0,0.4),
+        inset 0 0 20px rgba(0,0,0,0.2);
+}
+
+body.dark .nav a {
+    color: #ecf0f1;
+    border-color: rgba(255,255,255,0.05);
+}
+
+body.dark .nav a:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.15);
+}
+
+body.dark .user-profile {
+    background: rgba(255,255,255,0.05);
+}
+
+/* MAIN CONTENT */
+.main-content {
+    margin-left: 280px;
+    transition: margin-left 0.4s ease;
+    min-height: 100vh;
+}
+
+/* SIDEBAR TOGGLE BTN */
+#sidebarToggle {
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: #2c3e50;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 14px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 16px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+#sidebarToggle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 20px;
+}
+
+#sidebarToggle:hover {
+    background: rgba(255,255,255,0.4);
+    border-color: rgba(255,255,255,0.5);
+    transform: scale(1.08) rotate(90deg);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+#sidebarToggle:hover::before {
+    opacity: 1;
+}
+
+/* OVERLAY */
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s ease;
+    z-index: 999;
+}
+
+/* SIDEBAR STATES */
+body.sidebar-collapsed .sidebar {
+    transform: translateX(-100%) scale(0.95);
+}
+
+body.sidebar-collapsed .main-content {
+    margin-left: 0;
+}
+
+body.sidebar-open #overlay {
+    opacity: 1;
+    pointer-events: all;
+}
+
+body.sidebar-open .sidebar {
+    transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        width: 100%;
+        max-width: 100%;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        border-radius: 0 0 32px 0;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        background: rgba(255,255,255,0.95);
+        border-right: none;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 0 12px 20px;
+    }
+
+    body.sidebar-open .main-content {
+        overflow: hidden;
+    }
+
+    .header {
+        align-items: stretch;
+    }
+
+    .header > div {
+        width: 100%;
+    }
+
+    .header > div:last-child {
+        justify-content: flex-end;
+    }
+
+    .cards {
+        gap: 15px;
+    }
+}
+
+/* TOAST NOTIFICATIONS */
+#notification-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 2000;
+}
+
+.toast {
+    background: rgba(46, 204, 113, 0.95);
+    backdrop-filter: blur(20px);
+    color: white;
+    padding: 16px
+</style>
+</head>
+
+<body>
+<!-- OVERLAY -->
+<div id="overlay"></div>
+
+<div class="main-content">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <!-- LOGO -->
+        <div class="logo">💎 Finance</div>
+
+        <!-- USER PROFILE -->
+        {% if user %}
+        <div class="user-profile">
+            <img src="{{ user.avatar }}" alt="Avatar" style="width:48px; height:48px; border-radius:50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <span style="font-weight:600; font-size:15px;">{{ user.name }}</span>
+        </div>
+
+        <!-- LOGOUT -->
+        <a href="{{ url_for('logout') }}" 
+           style="display:inline-flex; align-items:center; gap:8px; padding:12px 20px; background:rgba(231,76,60,0.8); color:white; border-radius:20px; text-decoration:none; font-size:14px; font-weight:500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+           🚪 Logout
+        </a>
+        {% endif %}
+
+        <!-- NAVIGATION -->
+        <ul class="nav">
+            <li><a href="/" class="active"><span>🏠</span> Dashboard</a></li>
+            <li><a href="/add"><span>➕</span> Add Transaction</a></li>
+            <li><a href="/reports"><span>📊</span> Reports</a></li>
+        </ul>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="header">
+        <div style="display:flex; align-items:center; gap:16px;">
+            <button id="sidebarToggle">☰</button>
+            <h1 style="margin:0; font-size:28px;">💰 Finance App</h1>
+        </div>
+
+        <div style="display:flex; gap:12px;">
+            <a href="/add" class="add-btn">+ Add Transaction</a>
+            <button id="themeToggle" class="toggle-btn">
+                <span id="icon">🌙</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="cards">
+        <div class="card income">
+            <h3>Total Income</h3>
+            <p>${{ total_income | round(2) }}</p>
+        </div>
+        <div class="card expense">
+            <h3>Total Expenses</h3>
+            <p>${{ total_expense | round(2) }}</p>
+        </div>
+        <div class="card balance">
+            <h3>Net Balance</h3>
+            <p>${{ balance | round(2) }}</p>
+        </div>
+    </div>
+
+    <!-- OVERVIEW CHART -->
+    <div class="section">
+        <h2>📊 Overview</h2>
+        <canvas id="financeChart" style="max-height: 300px; border-radius: 20px;"></canvas>
+    </div>
+
+    <form method="GET" style="margin-bottom:20px; display:flex; gap:12px; align-items:center;">
+        <input type="date" name="date" value="{{ filter_date }}" style="padding:12px 16px; border-radius:12px; border:1px solid rgba(0,0,0,0.1); font-size:16px;">
+        <button type="submit" style="padding:12px 24px; background:#3498db; color:white; border:none; border-radius:12px; font-weight:500; cursor:pointer;">Filter</button>
+        <a href="/" style="padding:12px 24px; background:rgba(52,152,219,0.1); color:#3498db; text-decoration:none; border-radius:12px; font-weight:500;">Reset</a>
+    </form>
+
+    <!-- TRANSACTIONS -->
+    <div class="section">
+        <h2>📋 Recent Transactions</h2>
+        {% if transactions %}
+        <div class="table-responsive">
+        <table>
+            <tr>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Action</th>
+            </tr>
+            {% for t in transactions %}
+            <tr>
+                <td><span class="badge {{ 'income-badge' if t.Type == 'Income' else 'expense-badge' }}">{{ t.Type }}</span></td>
+                <td style="font-weight:500;">{{ t.Category }}</td>
+                <td>{{ t.Date }}</td>
+                <td style="font-weight:600; font-size:16px;">${{ t.Amount | round(2) }}</td>
+                <td>
+                    <a href="/edit/{{ t.id }}" 
+                       style="background:rgba(243,156,18,0.8); color:white; padding:8px 16px; border-radius:12px; text-decoration:none; font-size:13px; margin-right:8px; transition: all 0.3s ease;" 
+                       onmouseover="this.style.background='rgba(243,156,18,1)'" 
+                       onmouseout="this.style.background='rgba(243,156,18,0.8)'">
+                       ✏️ Edit
+                    </a>
+                    <a href="/delete/{{ t.id }}" 
+                       style="background:rgba(231,76,60,0.8); color:white; padding:8px 16px; border-radius:12px; text-decoration:none; font-size:13px; transition: all 0.3s ease;" 
+                       onclick="return confirm('Delete this transaction?')"
+                       onmouseover="this.style.background='rgba(231,76,60,1)'" 
+                       onmouseout="this.style.background='rgba(231,76,60,0.8)'">
+                       🗑️ Delete
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            <div style="text-align:center; padding:40px; color:#7f8c8d;">
+                <p style="font-size:18px; margin-bottom:8px;">No transactions yet</p>
+                <a href="/add" class="add-btn" style="display:inline-block;">Add your first transaction</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- CATEGORY SUMMARY -->
+    <div class="section">
+        <h2>📂 Category Summary</h2>
+        {% if categories %}
+        <table>
+            <tr>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Total</th>
+            </tr>
+            {% for key, value in categories.items() %}
+            <tr>
+                <td><span class="badge {{ 'income-badge' if key[0] == 'Income' else 'expense-badge' }}">{{ key[0] }}</span></td>
+                <td style="font-weight:500;">{{ key[1] }}</td>
+                <td style="font-weight:600; font-size:16px;">${{ value | round(2) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            <p>No summary available.</p>
+        {% endif %}
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="notification-container"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const income = {{ total_income or 0 }};
+const expense = {{ total_expense or 0 }};
+
+const ctx = document.getElementById('financeChart');
+let chart;
+
+function renderChart() {
+    const isDark = document.body.classList.contains('dark');
+    
+    if (chart) {
+        chart.destroy();
+    }
+    
+    chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Income', 'Expenses'],
+            datasets: [{
+                data: [income, expense],
+                backgroundColor: isDark 
+                    ? ['#27ae60', '#c0392b'] 
+                    : ['#2ecc71', '#e74c3c'],
+                borderWidth: 0,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: isDark ? '#ecf0f1' : '#2c3e50',
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Initial render
+renderChart();
+
+// THEME TOGGLE
+const toggleBtn = document.getElementById('themeToggle');
+const icon = document.getElementById('icon');
+
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+    icon.textContent = "☀️";
+}
+
+toggleBtn.addEventListener('click', () => {
+    document.body.classList.add('switching');
+    
+    setTimeout(() => {
+        document.body.classList.toggle('dark');
+        
+        if (document.body.classList.contains('dark')) {
+            localStorage.setItem('theme', 'dark');
+            icon.textContent = "☀️";
+        } else {
+            localStorage.setItem('theme', 'light');
+            icon.textContent = "🌙";
+        }
+        
+        document.body.classList.remove('switching');
+        renderChart();
+    }, 200);
+});
+
+// SIDEBAR TOGGLE
+const sidebarToggle = document.getElementById('sidebarToggle');
+sidebarToggle.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+        document.body.classList.toggle('sidebar-open');
+    } else {
+        document.body.classList.toggle('sidebar-collapsed');
+    }
+});
+
+const overlay = document.getElementById('overlay');
+overlay.addEventListener('click', () => {
+    document.body.classList.remove('sidebar-open');
+    document.body.classList.remove('sidebar-collapsed');
+});
+
+// NOTIFICATIONS
+function showNotification(message) {
+    const container = document.getElementById('notification-container');
+    const toast = document.createElement('div');
+    toast.classList.add('toast');
+    toast.textContent = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'none';
+        toast.style.opacity = '0';
+        setTimeout(() => container.removeChild(toast), 300);
+    }, 4000);
+}
+
+// Welcome notification
+showNotification("Welcome back to your Finance Dashboard! ✨");
+</script>
+</body>
+</html>

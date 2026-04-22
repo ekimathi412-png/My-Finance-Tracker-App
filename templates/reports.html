@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports & Insights</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* [KEEP ALL YOUR EXISTING STYLES - NO CHANGE NEEDED] */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+    min-height: 100vh;
+    padding: 20px;
+    color: #2c3e50;
+}
+
+body.dark {
+    background: linear-gradient(135deg, #1a1e2e, #16213e);
+    color: #ecf0f1;
+}
+
+/* [KEEP ALL OTHER STYLES EXACTLY AS THEY ARE] */
+.header { max-width: 1200px; margin: 0 auto 40px; text-align: center; }
+.header h1 { font-size: 36px; font-weight: 600; background: linear-gradient(135deg, #3498db, #2980b9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
+.action-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+.btn { padding: 16px 32px; border: none; border-radius: 24px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 12px; backdrop-filter: blur(20px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); transition: all 0.3s ease; position: relative; overflow: hidden; }
+.btn-export { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+.btn-export:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(46,204,113,0.4); }
+.btn-period { background: rgba(255,255,255,0.25); color: #2c3e50; border: 1px solid rgba(255,255,255,0.3); }
+.btn-period:hover, .btn-period.active { background: rgba(52,152,219,0.2); border-color: rgba(52,152,219,0.5); color: #3498db; }
+.btn-period.active { box-shadow: 0 0 0 3px rgba(52,152,219,0.2); }
+.section { max-width: 1200px; margin: 0 auto 40px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(40px); border-radius: 32px; padding: 40px; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 25px 45px rgba(0,0,0,0.1); }
+.section h2 { font-size: 24px; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 32px; margin-bottom: 32px; }
+.chart-container { background: rgba(255,255,255,0.15); border-radius: 24px; padding: 32px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); }
+.chart-container canvas { max-height: 300px; border-radius: 16px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.insight-card { background: rgba(255,255,255,0.2); border-radius: 24px; padding: 28px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; }
+.insight-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+.insight-icon { font-size: 48px; margin-bottom: 16px; }
+.insight-h3 { font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #3498db; }
+.insight-text { line-height: 1.6; opacity: 0.9; }
+table { width: 100%; border-collapse: collapse; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1); background: rgba(255,255,255,0.2); }
+th { background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px 16px; text-align: left; font-weight: 500; }
+td { padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+tr:hover { background: rgba(255,255,255,0.3); }
+body.dark .section, body.dark .chart-container, body.dark .insight-card { background: rgba(30,39,46,0.5); border-color: rgba(255,255,255,0.1); }
+body.dark th { background: linear-gradient(135deg, #34495e, #2c3e50); }
+body.dark .insight-h3 { color: #16a085; }
+body.dark .btn-period { color: #ecf0f1; background: rgba(255,255,255,0.1); }
+
+.mobile-menu {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+}
+
+.mobile-menu.open {
+    display: flex;
+}
+
+.mobile-menu-toggle {
+    display: none;
+    width: 100%;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: inline-flex;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: none;
+        justify-content: center;
+    }
+
+    .section {
+        padding: 24px 20px;
+    }
+
+    .header h1 {
+        font-size: 32px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 520px;
+    }
+}
+
+@media (max-width: 520px) {
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .action-buttons {
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 12px 18px;
+        font-size: 14px;
+    }
+
+    .section {
+        padding: 24px 18px;
+    }
+
+    .chart-container {
+        padding: 22px;
+    }
+
+    .chart-container canvas {
+        max-height: 240px;
+    }
+
+    table {
+        min-width: 380px;
+    }
+
+    th, td {
+        padding: 12px 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .mobile-menu {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .action-buttons,
+    .mobile-menu {
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: auto;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="main-content">
+    <div class="header">
+        <h1>📊 Reports & Insights</h1>
+        <p>Analyze your finances, export data, and get personalized saving tips</p>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn mobile-menu-toggle" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+        <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
+        <a href="/export/transactions?period=month&month={{ chart_data.selected_month or '' }}" class="btn btn-export">📅 Export Month to Excel</a>
+        <a href="/reports/all" class="btn btn-period {% if current_period == 'all' %}active{% endif %}">All Time</a>
+        <a href="/reports/year" class="btn btn-period {% if current_period == 'year' %}active{% endif %}">This Year</a>
+        <a href="/reports/month" class="btn btn-period {% if current_period == 'month' %}active{% endif %}">This Month</a>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="/export/transactions?period=all" class="btn btn-export">📊 Export All to Excel</a>
+        <a href="/export/transactions?period=month&month={{ chart_data.selected_month or '' }}" class="btn btn-export">📅 Export Month to Excel</a>
+        <a href="/reports/all" class="btn btn-period {% if current_period == 'all' %}active{% endif %}">All Time</a>
+        <a href="/reports/year" class="btn btn-period {% if current_period == 'year' %}active{% endif %}">This Year</a>
+        <a href="/reports/month" class="btn btn-period {% if current_period == 'month' %}active{% endif %}">This Month</a>
+    </div>
+
+    {% if chart_data.month_options %}
+    <div class="section" style="padding: 24px 40px; margin-bottom: 32px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-weight:600; font-size: 18px;">Available Months</div>
+            <p style="color: #576370; margin-top: 8px;">Select a month to view or download transactions</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; justify-items: center;">
+            {% for month in chart_data.month_options %}
+            <div style="background: rgba(255,255,255,0.15); border-radius: 16px; padding: 16px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 180px;">
+                <div style="font-weight: 600; margin-bottom: 12px; color: #3498db;">{{ month }}</div>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <a href="/reports/month?month={{ month }}" class="btn btn-period" style="padding: 8px 16px; font-size: 14px;">View</a>
+                    <a href="/export/transactions?period=month&month={{ month }}" class="btn btn-export" style="padding: 8px 16px; font-size: 14px;">Download</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2>📈 Financial Trends</h2>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Monthly Spending</h3>
+                <canvas id="spendingChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Category Breakdown</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Income vs Expenses</h3>
+                <canvas id="balanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>💡 Smart Insights & Saving Tips</h2>
+        <div class="insights-grid">
+            {% for tip in tips %}
+            <div class="insight-card">
+                <div class="insight-icon">💡</div>
+                <div class="insight-text">{{ tip }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📋 Transactions{% if chart_data.selected_month %} for {{ chart_data.selected_month }}{% elif current_period == 'year' and selected_year %} for {{ selected_year }}{% endif %}</h2>
+        <p style="margin-bottom:18px; color:#576370;">Showing {{ chart_data.record_count }} transaction{{ 's' if chart_data.record_count != 1 else '' }}.</p>
+        <div class="table-responsive">
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody">
+                    <tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">Loading transactions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// ✅ PERFECT - SINGLE SOURCE OF TRUTH
+window.appData = {{ chart_data | tojson | safe }};
+window.insights = {{ insights | tojson | safe }};
+
+let charts = []; // Track chart instances
+
+function renderCharts() {
+    const data = window.appData;
+    
+    // Destroy previous charts properly
+    charts.forEach(chart => chart.destroy());
+    charts = [];
+    
+    // 1. Monthly Spending
+    const spendingCtx = document.getElementById('spendingChart')?.getContext('2d');
+    if (spendingCtx) {
+        const spendingLabels = data.monthly_spending?.labels || [];
+        const spendingValues = data.monthly_spending?.values || [];
+        const movingAverageValues = spendingValues.map((_, index, arr) => {
+            const window = arr.slice(Math.max(0, index - 2), index + 1);
+            const sum = window.reduce((acc, value) => acc + value, 0);
+            return window.length ? parseFloat((sum / window.length).toFixed(2)) : 0;
+        });
+
+        charts.push(new Chart(spendingCtx, {
+            type: 'line',
+            data: {
+                labels: spendingLabels,
+                datasets: [
+                    {
+                        label: 'Monthly Spending',
+                        data: spendingValues,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231,76,60,0.18)',
+                        pointBackgroundColor: '#c0392b',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.5,
+                        cubicInterpolationMode: 'monotone',
+                        fill: true,
+                        borderWidth: 3
+                    },
+                    {
+                        label: '3-Month Average',
+                        data: movingAverageValues,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52,152,219,0.08)',
+                        pointRadius: 0,
+                        tension: 0.5,
+                        cubicInterpolationMode: 'monotone',
+                        borderDash: [6, 4],
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 900, easing: 'easeOutQuart' },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#2c3e50' } },
+                    tooltip: { enabled: true, mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#2c3e50' } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(44,62,80,0.08)' }, ticks: { color: '#2c3e50' } }
+                }
+            }
+        }));
+    }
+
+    // 2. Category Breakdown
+    const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
+    if (categoryCtx) {
+        charts.push(new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data.categories || {}),
+                datasets: [{
+                    data: Object.values(data.categories || {}),
+                    backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#e67e22', '#e74c3c', '#9b59b6']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    }
+
+    // 3. Income vs Expenses
+    const balanceCtx = document.getElementById('balanceChart')?.getContext('2d');
+    if (balanceCtx) {
+        charts.push(new Chart(balanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Income', 'Expenses'],
+                datasets: [{
+                    data: [data.balance?.income || 0, data.balance?.expenses || 0],
+                    backgroundColor: ['#2ecc71', '#e74c3c']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('transactionsBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    const transactions = window.appData.transactions || [];
+    
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#7f8c8d;">No transactions yet. <a href="/add">Add your first transaction</a></td></tr>';
+        return;
+    }
+    
+    transactions.forEach(t => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${t.Date || 'N/A'}</td>
+            <td>${t.Type || 'N/A'}</td>
+            <td>${t.Category || 'N/A'}</td>
+            <td>$${parseFloat(t.Amount || 0).toFixed(2)}</td>
+        `;
+    });
+}
+
+function renderInsights() {
+    const data = window.appData;
+    
+    // Savings Score
+    const savingEl = document.getElementById('savingPotential');
+    if (savingEl) {
+        const rate = Math.round((data.saving_rate || 0) * 100);
+        savingEl.innerHTML = `Your Savings Score: <span class="score">${rate}%</span>`;
+    }
+    
+    // Top Expense
+    const topExpenseEl = document.getElementById('topExpense');
+    const topCategoryEl = document.getElementById('topCategory');
+    if (topExpenseEl) topExpenseEl.innerHTML = `Top Expense: ${data.top_category || 'None'}`;
+    if (topCategoryEl) topCategoryEl.textContent = data.top_category ? `${data.top_category} is your biggest spend` : 'No expenses yet';
+}
+
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    if (!menu) {
+        return;
+    }
+    menu.classList.toggle('open');
+}
+
+function renderAll() {
+    renderCharts();
+    renderInsights();
+    renderTable();
+}
+
+// Dark mode sync
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', renderAll);
+</script>
+</body>
+</html>

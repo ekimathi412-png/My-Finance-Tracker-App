@@ -1,0 +1,25 @@
+{
+  "transactions": [
+    {
+      "id": "4eb7c32e-d957-4efb-8c3a-dc57896a6115",
+      "Type": "Income",
+      "Category": "Salary",
+      "Amount": 15000.0,
+      "Date": "2026-04-14"
+    },
+    {
+      "id": "57759cc0-2737-43bb-b8a5-01de129cca6f",
+      "Type": "Expense",
+      "Category": "Wifi",
+      "Amount": 750.0,
+      "Date": "2026-04-14"
+    },
+    {
+      "id": "6d8b754f-ed91-4b74-a899-45b14dd74a40",
+      "Type": "Expense",
+      "Category": "Food",
+      "Amount": 4320.0,
+      "Date": "2026-04-14"
+    }
+  ]
+}
